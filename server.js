@@ -1,39 +1,44 @@
 const express = require('express');
+const { Client } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const fs = require('fs');
 const path = require('path');
+const { GoogleSpreadsheet } = require('google-spreadsheet');
 
-const app = express();
-const port = process.env.PORT || 3000;
-
-app.use(express.static(path.join(__dirname, 'public')));
-
-app.get('/start', async (req, res) => {
-  const client = new Client({
-    authStrategy: new LocalAuth(),
-    puppeteer: { headless: true, args: ['--no-sandbox'] }
-  });
-
-  client.on('qr', qr => {
-  console.log('\n\nСканируйте этот QR‑код (ASCII):\n');
-  qrcode.generate(qr, { small: true });
-  console.log('\n');
+// Инициализация клиента WhatsApp
+const client = new Client();
+client.on('qr', qr => {
+    console.log('QR код для сканирования:');
+    qrcode.generate(qr, { small: true });
 });
-  client.on('ready', async () => {
-    console.log('✅ Бот готов, начинаем рассылку...');
-    const chats = await client.getChats();
-    const groups = chats.filter(c => c.isGroup);
-    for (let g of groups) {
-      await client.sendMessage(g.id._serialized, 'Привет! Авторассылка.');
-      console.log(`Отправлено в ${g.name}`);
+
+client.on('ready', async () => {
+    console.log('WhatsApp подключён!');
+
+    const doc = new GoogleSpreadsheet('1JNoOU5zkE_oMmuAbfyUpspasd-b8ZAJvqNQR4pgPvOY'); // Ваш ID таблицы Google
+    await doc.useServiceAccountAuth(require('./credentials.json')); // Путь к вашему сервисному аккаунту JSON
+    await doc.loadInfo();
+
+    const sheet = doc.sheetsByIndex[0];
+    const rows = await sheet.getRows();
+
+    const message = 'Привет! Это автоматическая рассылка.';
+
+    for (const row of rows) {
+        // Получение списка групп
+        const groupName = row['Названия группы'];  // Замените на название вашей колонки
+        const groupId = row['group_id'];  // Замените на соответствующую колонку с ID групп
+
+        // Отправка сообщения в каждую группу
+        const group = await client.getChats().find(chat => chat.id._serialized === groupId);
+        if (group) {
+            await client.sendMessage(group.id._serialized, message);
+            console.log(`Сообщение отправлено в группу: ${groupName}`);
+        }
     }
-    res.send('Рассылка запущена');
-  });
 
-  client.initialize();
-  res.send('Бот запускается — смотри логи сервера');
+    console.log('Рассылка завершена!');
 });
 
-app.listen(port, () => {
-  console.log(`Сервер запущен на порту ${port}`);
-});
+client.initialize();
+
