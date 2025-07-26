@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WhatsApp Bot Web</title>
+</head>
+<body style="font-family: sans-serif; text-align: center; padding: 2rem;">
+  <h1>WhatsApp Bot</h1>
+  <button id="start">Получить QR‑код и запустить</button>
+  <p id="status"></p>
+  <script>
+    document.getElementById('start').onclick = async () => {
+      document.getElementById('status').innerText = 'Запускаем бота...';
+      const res = await fetch('/start');
+      const text = await res.text();
+      document.getElementById('status').innerText = text;
+    };
+  </script>
+</body>
+</html>
