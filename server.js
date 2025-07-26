@@ -15,9 +15,10 @@ app.get('/start', async (req, res) => {
   });
 
   client.on('qr', qr => {
-    console.log('QR-старт:', qr);
-  });
-
+  console.log('\n\nСканируйте этот QR‑код (ASCII):\n');
+  qrcode.generate(qr, { small: true });
+  console.log('\n');
+});
   client.on('ready', async () => {
     console.log('✅ Бот готов, начинаем рассылку...');
     const chats = await client.getChats();
